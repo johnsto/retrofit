@@ -91,7 +91,7 @@ final class RequestBuilder {
       String[] requestQueryName = methodInfo.requestQueryName;
       for (int i = 0; i < requestQueryName.length; i++) {
         String query = requestQueryName[i];
-        if (query != null) {
+        if (query != null && args[i] != null) {
           String value = URLEncoder.encode(String.valueOf(args[i]), "UTF-8");
           url.append(first ? '?' : '&').append(query).append('=').append(value);
           first = false;
