@@ -408,7 +408,7 @@ public class RestMethodInfoTest {
 
   @Test public void explicitEndpoint() {
     class Example {
-      @GET() Response a(@Endpoint String endpoint) {
+      @GET Response a(@Endpoint String endpoint) {
         return null;
       }
     }
@@ -424,7 +424,7 @@ public class RestMethodInfoTest {
 
   @Test public void explicitEndpointWithQuery() {
     class Example {
-      @GET() Response a(@Endpoint String endpoint, @Query("a") String a) {
+      @GET Response a(@Endpoint String endpoint, @Query("a") String a) {
         return null;
       }
     }
@@ -761,10 +761,10 @@ public class RestMethodInfoTest {
     methodInfo.init();
   }
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test(expected = IllegalStateException.class)
   public void endpointComesFirst() {
     class Example {
-      @GET() Response a(@Query("a") String a, @Endpoint String endpoint) {
+      @GET Response a(@Query("a") String a, @Endpoint String endpoint) {
         return null;
       }
     }
