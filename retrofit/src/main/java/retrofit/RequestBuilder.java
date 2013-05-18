@@ -69,16 +69,20 @@ final class RequestBuilder {
    * method.
    */
   Request build() throws UnsupportedEncodingException {
-    String apiUrl = this.apiUrl;
+      StringBuilder url;
+    if (methodInfo.expectsEndpoint) {
+      url = new StringBuilder(args[0].toString());
+    } else {
+      String apiUrl = this.apiUrl;
 
-    StringBuilder url = new StringBuilder(apiUrl);
-    if (apiUrl.endsWith("/")) {
-      // We require relative paths to start with '/'. Prevent a double-slash.
-      url.deleteCharAt(url.length() - 1);
+      url = new StringBuilder(apiUrl);
+      if (apiUrl.endsWith("/")) {
+        // We require relative paths to start with '/'. Prevent a double-slash.
+        url.deleteCharAt(url.length() - 1);
+      }
+
+      url.append(buildRelativeUrl());
     }
-
-    // Append the method relative URL.
-    url.append(buildRelativeUrl());
 
     // Append query parameters, if needed.
     if (methodInfo.hasQueryParams) {

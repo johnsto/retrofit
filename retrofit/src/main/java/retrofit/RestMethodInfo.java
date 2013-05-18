@@ -26,7 +26,9 @@ import java.util.List;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
 import retrofit.http.Body;
+import retrofit.http.Endpoint;
 import retrofit.http.Field;
 import retrofit.http.FormUrlEncoded;
 import retrofit.http.Header;
@@ -67,9 +69,11 @@ final class RestMethodInfo {
   String requestUrl;
   Set<String> requestUrlParamNames;
   String requestQuery;
+  boolean expectsEndpoint = false;
   List<retrofit.client.Header> headers;
 
   // Parameter-level details
+  String requestEndpointName;
   String[] requestUrlParam;
   String[] requestQueryName;
   boolean hasQueryParams = false;
@@ -171,7 +175,23 @@ final class RestMethodInfo {
 
   /** Loads {@link #requestUrl}, {@link #requestUrlParamNames}, and {@link #requestQuery}. */
   private void parsePath(String path) {
-    if (path == null || path.length() == 0 || path.charAt(0) != '/') {
+    Annotation[][] paramAnnotations = method.getParameterAnnotations();
+    if (paramAnnotations.length > 0
+        && paramAnnotations[0].length > 0
+        && paramAnnotations[0][0].annotationType() == Endpoint.class) {
+      if (path != null && path.length() > 0) {
+        throw new IllegalArgumentException("Method "
+            + method.getName()
+            + " must have path OR endpoint, not both. ("
+            + method.getName()
+            + ")");
+      } else {
+        expectsEndpoint = true;
+        return;
+      }
+    }
+
+    if (path.length() == 0 || path.charAt(0) != '/') {
       throw new IllegalArgumentException("URL path \""
           + path
           + "\" on method "
@@ -322,11 +342,13 @@ final class RestMethodInfo {
             }
 
             urlParam[i] = name;
+          } else if (annotationType == Endpoint.class) {
+            hasRetrofitAnnotation = true;
+            expectsEndpoint = true;
           } else if (annotationType == Query.class) {
             hasRetrofitAnnotation = true;
             hasQueryParams = true;
             String name = ((Query) parameterAnnotation).value();
-
             queryName[i] = name;
           } else if (annotationType == Header.class) {
             String name = ((Header) parameterAnnotation).value();

@@ -245,6 +245,17 @@ public class RequestBuilderTest {
     assertThat(request.getBody()).isNull();
   }
 
+  @Test public void explicitEndpoint() throws Exception {
+    Request request = new Helper() //
+        .setMethod("GET") //
+        .setUrl("http://example.com/") //
+        .setPath("/foo/bar/") //
+        .setEndpoint("https://example.net/baz/")
+        .addQueryParam("ping", "pong")
+        .build();
+    assertThat(request.getUrl()).isEqualTo("https://example.net/baz/?ping=pong");
+  }
+
   @Test public void methodHeader() throws Exception {
     Request request = new Helper() //
         .setMethod("GET") //
@@ -298,6 +309,7 @@ public class RequestBuilderTest {
     private String method;
     private boolean hasBody = false;
     private boolean hasQueryParams = false;
+    private boolean expectsEndpoint = false;
     private String path;
     private String query;
     private final List<String> pathParams = new ArrayList<String>();
@@ -393,6 +405,15 @@ public class RequestBuilderTest {
       return this;
     }
 
+    Helper setEndpoint(String endpoint) {
+      this.expectsEndpoint = true;
+      if(args.size() > 0) {
+        throw new IllegalStateException("Endpoint must be set before args");
+      }
+      addParam(null, null, null, null, null, endpoint);
+      return this;
+    }
+
     Request build() throws Exception {
       if (method == null) {
         throw new IllegalStateException("Method must be set.");
@@ -411,6 +432,7 @@ public class RequestBuilderTest {
       methodInfo.requestUrlParamNames = RestMethodInfo.parsePathParameters(path);
       methodInfo.requestQuery = query;
       methodInfo.hasQueryParams = hasQueryParams;
+      methodInfo.expectsEndpoint = expectsEndpoint;
       methodInfo.requestUrlParam = pathParams.toArray(new String[pathParams.size()]);
       methodInfo.requestQueryName = queryParams.toArray(new String[queryParams.size()]);
       methodInfo.requestFormFields = fieldParams.toArray(new String[fieldParams.size()]);
