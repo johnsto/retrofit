@@ -73,7 +73,6 @@ final class RestMethodInfo {
   List<retrofit.client.Header> headers;
 
   // Parameter-level details
-  String requestEndpointName;
   String[] requestUrlParam;
   String[] requestQueryName;
   boolean hasQueryParams = false;
@@ -175,23 +174,12 @@ final class RestMethodInfo {
 
   /** Loads {@link #requestUrl}, {@link #requestUrlParamNames}, and {@link #requestQuery}. */
   private void parsePath(String path) {
-    Annotation[][] paramAnnotations = method.getParameterAnnotations();
-    if (paramAnnotations.length > 0
-        && paramAnnotations[0].length > 0
-        && paramAnnotations[0][0].annotationType() == Endpoint.class) {
-      if (path != null && path.length() > 0) {
-        throw new IllegalArgumentException("Method "
-            + method.getName()
-            + " must have path OR endpoint, not both. ("
-            + method.getName()
-            + ")");
-      } else {
-        expectsEndpoint = true;
-        return;
-      }
+    if (path == null || path.length() == 0) {
+      expectsEndpoint = true;
+      return;
     }
 
-    if (path.length() == 0 || path.charAt(0) != '/') {
+    if (path.charAt(0) != '/') {
       throw new IllegalArgumentException("URL path \""
           + path
           + "\" on method "
@@ -343,8 +331,14 @@ final class RestMethodInfo {
 
             urlParam[i] = name;
           } else if (annotationType == Endpoint.class) {
+            if (!expectsEndpoint) {
+              throw new IllegalStateException(
+                  "@Endpoint parameter cannot be used when path provided.");
+            }
+            if (i != 0) {
+              throw new IllegalStateException("@Endpoint parameter must be first.");
+            }
             hasRetrofitAnnotation = true;
-            expectsEndpoint = true;
           } else if (annotationType == Query.class) {
             hasRetrofitAnnotation = true;
             hasQueryParams = true;
