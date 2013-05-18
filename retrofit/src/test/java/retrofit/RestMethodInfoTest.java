@@ -11,21 +11,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import org.junit.Test;
-import retrofit.http.Body;
-import retrofit.http.DELETE;
-import retrofit.http.Field;
-import retrofit.http.FormUrlEncoded;
-import retrofit.http.GET;
-import retrofit.http.HEAD;
-import retrofit.http.Header;
-import retrofit.http.Headers;
-import retrofit.http.Multipart;
-import retrofit.http.POST;
-import retrofit.http.PUT;
-import retrofit.http.Part;
-import retrofit.http.Path;
-import retrofit.http.Query;
-import retrofit.http.RestMethod;
+import retrofit.http.*;
 import retrofit.mime.TypedOutput;
 
 import static java.lang.annotation.ElementType.METHOD;
@@ -420,6 +406,38 @@ public class RestMethodInfoTest {
     assertThat(methodInfo.requestType).isEqualTo(SIMPLE);
   }
 
+  @Test public void explicitEndpoint() {
+    class Example {
+      @GET() Response a(@Endpoint String endpoint) {
+        return null;
+      }
+    }
+
+    Method method = TestingUtils.getMethod(Example.class, "a");
+    RestMethodInfo methodInfo = new RestMethodInfo(method);
+    methodInfo.init();
+
+    assertThat(methodInfo.expectsEndpoint).isEqualTo(true);
+    assertThat(methodInfo.bodyIndex).isEqualTo(NO_BODY);
+    assertThat(methodInfo.requestType).isEqualTo(SIMPLE);
+  }
+
+  @Test public void explicitEndpointWithQuery() {
+    class Example {
+      @GET() Response a(@Endpoint String endpoint, @Query("a") String a) {
+        return null;
+      }
+    }
+
+    Method method = TestingUtils.getMethod(Example.class, "a");
+    RestMethodInfo methodInfo = new RestMethodInfo(method);
+    methodInfo.init();
+
+    assertThat(methodInfo.expectsEndpoint).isEqualTo(true);
+    assertThat(methodInfo.bodyIndex).isEqualTo(NO_BODY);
+    assertThat(methodInfo.requestType).isEqualTo(SIMPLE);
+  }
+
   @Test public void bodyObject() {
     class Example {
       @PUT("/") Response a(@Body Object o) {
@@ -693,8 +711,8 @@ public class RestMethodInfoTest {
     methodInfo.init();
 
     assertThat(methodInfo.headers).isEqualTo(
-        Arrays.asList(new retrofit.client.Header("X-Foo", "Bar"),
-            new retrofit.client.Header("X-Ping", "Pong")));
+            Arrays.asList(new retrofit.client.Header("X-Foo", "Bar"),
+                    new retrofit.client.Header("X-Ping", "Pong")));
   }
 
   @Test public void twoHeaderParams() {
@@ -734,6 +752,19 @@ public class RestMethodInfoTest {
       @FormUrlEncoded
       @POST("/")
       Response a() {
+        return null;
+      }
+    }
+
+    Method method = TestingUtils.getMethod(Example.class, "a");
+    RestMethodInfo methodInfo = new RestMethodInfo(method);
+    methodInfo.init();
+  }
+
+  @Test(expected = IllegalArgumentException.class)
+  public void endpointComesFirst() {
+    class Example {
+      @GET() Response a(@Query("a") String a, @Endpoint String endpoint) {
         return null;
       }
     }
