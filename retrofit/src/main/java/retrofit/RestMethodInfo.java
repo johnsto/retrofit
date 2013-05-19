@@ -142,7 +142,7 @@ final class RestMethodInfo {
         }
         headers = parseHeaders(headersToParse);
       } else if (annotationType == Serialize.class) {
-        Class<Serializer> serializerClass = ((Serialize) methodAnnotation).value();
+        Class<? extends Serializer> serializerClass = ((Serialize) methodAnnotation).value();
         try {
           defaultSerializer = serializerClass.newInstance();
         } catch (InstantiationException e) {
@@ -360,7 +360,7 @@ final class RestMethodInfo {
             queryName[i] = name;
           } else if (annotationType == Serialize.class) {
             hasRetrofitAnnotation = true;
-            Class<Serializer> ser = ((Serialize) parameterAnnotation).value();
+            Class<? extends Serializer> ser = ((Serialize) parameterAnnotation).value();
             try {
               serializers[i] = ser.newInstance();
             } catch (InstantiationException e) {
