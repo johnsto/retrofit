@@ -29,4 +29,8 @@ public final class AndroidApacheClient extends ApacheClient {
   public AndroidApacheClient() {
     super(AndroidHttpClient.newInstance("Retrofit"));
   }
+
+  public void close() {
+    ((AndroidHttpClient) client).close();
+  }
 }
