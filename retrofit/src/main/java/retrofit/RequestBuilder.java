@@ -70,8 +70,10 @@ final class RequestBuilder {
    */
   Request build() throws UnsupportedEncodingException {
       StringBuilder url;
+    boolean first = true;
     if (methodInfo.expectsEndpoint) {
       url = new StringBuilder(args[0].toString());
+      first = url.indexOf("?") < 0;
     } else {
       String apiUrl = this.apiUrl;
 
@@ -86,7 +88,6 @@ final class RequestBuilder {
 
     // Append query parameters, if needed.
     if (methodInfo.hasQueryParams) {
-      boolean first = true;
       String requestQuery = methodInfo.requestQuery;
       if (requestQuery != null) {
         url.append('?').append(requestQuery);

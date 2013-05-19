@@ -261,12 +261,21 @@ public class RequestBuilderTest {
   @Test public void explicitEndpoint() throws Exception {
     Request request = new Helper() //
         .setMethod("GET") //
-        .setUrl("http://example.com/") //
         .setPath("/foo/bar/") //
         .setEndpoint("https://example.net/baz/")
         .addQueryParam("ping", "pong")
         .build();
     assertThat(request.getUrl()).isEqualTo("https://example.net/baz/?ping=pong");
+  }
+
+  @Test public void explicitEndpointWithQueryPart() throws Exception {
+    Request request = new Helper() //
+        .setMethod("GET") //
+        .setPath("/foo/bar/") //
+        .setEndpoint("https://example.net/baz/?foo=bar")
+        .addQueryParam("ping", "pong")
+        .build();
+    assertThat(request.getUrl()).isEqualTo("https://example.net/baz/?foo=bar&ping=pong");
   }
 
   @Test public void methodHeader() throws Exception {
