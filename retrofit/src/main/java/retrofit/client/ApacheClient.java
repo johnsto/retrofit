@@ -38,7 +38,7 @@ import retrofit.mime.TypedOutput;
 
 /** A {@link Client} which uses an implementation of Apache's {@link HttpClient}. */
 public class ApacheClient implements Client {
-  private final HttpClient client;
+  protected final HttpClient client;
 
   /** Creates an instance backed by {@link DefaultHttpClient}. */
   public ApacheClient() {
