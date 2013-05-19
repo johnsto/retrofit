@@ -25,6 +25,7 @@ import retrofit.converter.Converter;
 import retrofit.mime.FormUrlEncodedTypedOutput;
 import retrofit.mime.MultipartTypedOutput;
 import retrofit.mime.TypedOutput;
+import retrofit.serializer.Serializer;
 
 /** Builds HTTP requests from Java method invocations. */
 final class RequestBuilder {
@@ -96,10 +97,19 @@ final class RequestBuilder {
       String[] requestQueryName = methodInfo.requestQueryName;
       for (int i = 0; i < requestQueryName.length; i++) {
         String query = requestQueryName[i];
-        if (query != null && args[i] != null) {
-          String value = URLEncoder.encode(String.valueOf(args[i]), "UTF-8");
-          url.append(first ? '?' : '&').append(query).append('=').append(value);
-          first = false;
+        if (query != null) {
+          Object arg = args[i];
+          if (arg != null) {
+            Serializer serializer = methodInfo.requestSerializers[i];
+            if (serializer == null) {
+              serializer = methodInfo.defaultSerializer;
+            }
+            for (String value: serializer.serialize(arg)) {
+              value = URLEncoder.encode(value, "UTF-8");
+              url.append(first ? '?' : '&').append(query).append('=').append(value);
+              first = false;
+            }
+          }
         }
       }
     }
@@ -120,7 +130,13 @@ final class RequestBuilder {
         if (name == null) continue;
         Object arg = args[i];
         if (arg != null) {
-          headers.add(new retrofit.client.Header(name, String.valueOf(arg)));
+          Serializer serializer = methodInfo.requestSerializers[i];
+          if (serializer == null) {
+            serializer = methodInfo.defaultSerializer;
+          }
+          for (String value: serializer.serialize(arg)) {
+            headers.add(new retrofit.client.Header(name, value));
+          }
         }
       }
     }
@@ -164,7 +180,9 @@ final class RequestBuilder {
         for (int i = 0; i < requestFormFields.length; i++) {
           String name = requestFormFields[i];
           if (name != null) {
-            body.addField(name, String.valueOf(args[i]));
+            Object arg = args[i];
+            String value = String.valueOf(arg);
+            body.addField(name, value);
           }
         }
         return body;

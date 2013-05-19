@@ -18,6 +18,8 @@ import retrofit.mime.MimeHelper;
 import retrofit.mime.MultipartTypedOutput;
 import retrofit.mime.TypedOutput;
 import retrofit.mime.TypedString;
+import retrofit.serializer.ArrayAwareSerializer;
+import retrofit.serializer.Serializer;
 
 import static org.fest.assertions.api.Assertions.assertThat;
 import static retrofit.RestMethodInfo.NO_BODY;
@@ -130,6 +132,39 @@ public class RequestBuilderTest {
     assertThat(request.getMethod()).isEqualTo("GET");
     assertThat(request.getHeaders()).isEmpty();
     assertThat(request.getUrl()).isEqualTo("http://example.com/foo/bar/pong%23/?kit=kat%23");
+    assertThat(request.getBody()).isNull();
+  }
+
+  @Test public void getWithSerializedQueryParam() throws Exception {
+    Serializer serializer = new Serializer() {
+      @Override
+      public String[] serialize(Object obj) {
+        char[] chars = (char[]) obj;
+        return new String[] { new String(chars) };
+      }
+    };
+    Request request = new Helper() //
+        .setMethod("GET") //
+        .setUrl("http://example.com") //
+        .setPath("/foo/bar/") //
+        .addQueryParam("ping", new char[] { 'p', 'o', 'n', 'g' }, serializer) //
+        .build();
+    assertThat(request.getMethod()).isEqualTo("GET");
+    assertThat(request.getHeaders()).isEmpty();
+    assertThat(request.getUrl()).isEqualTo("http://example.com/foo/bar/?ping=pong");
+    assertThat(request.getBody()).isNull();
+  }
+
+  @Test public void getWithSerializedArrayQueryParam() throws Exception {
+    Request request = new Helper() //
+        .setMethod("GET") //
+        .setUrl("http://example.com") //
+        .setPath("/foo/bar/") //
+        .addQueryParam("ping", new String[] { "pong", "pang" }, new ArrayAwareSerializer()) //
+        .build();
+    assertThat(request.getMethod()).isEqualTo("GET");
+    assertThat(request.getHeaders()).isEmpty();
+    assertThat(request.getUrl()).isEqualTo("http://example.com/foo/bar/?ping=pong&ping=pang");
     assertThat(request.getBody()).isNull();
   }
 
@@ -326,6 +361,7 @@ public class RequestBuilderTest {
     private final List<String> fieldParams = new ArrayList<String>();
     private final List<String> partParams = new ArrayList<String>();
     private final List<String> headerParams = new ArrayList<String>();
+    private final List<Serializer> serializers = new ArrayList<Serializer>();
     private final List<Object> args = new ArrayList<Object>();
     private final List<Header> headers = new ArrayList<Header>();
     private int bodyIndex = NO_BODY;
@@ -358,44 +394,54 @@ public class RequestBuilderTest {
     }
 
     private void addParam(String path, String query, String field, String part, String header,
-        Object value) {
+                          Object value, Serializer serializer) {
       pathParams.add(path);
       queryParams.add(query);
       fieldParams.add(field);
       partParams.add(part);
       headerParams.add(header);
+      serializers.add(serializer);
       args.add(value);
     }
 
     Helper addPathParam(String name, Object value) {
-      addParam(name, null, null, null, null, value);
+      addParam(name, null, null, null, null, value, null);
       return this;
     }
 
-    Helper addQueryParam(String name, String value) {
-      addParam(null, name, null, null, null, value);
+    Helper addPathParam(String name, Object value, Serializer serializer) {
+      addParam(name, null, null, null, null, value, serializer);
+      return this;
+    }
+
+    Helper addQueryParam(String name, Object value) {
+      return addQueryParam(name, value, null);
+    }
+
+    Helper addQueryParam(String name, Object value, Serializer serializer) {
+      addParam(null, name, null, null, null, value, serializer);
       hasQueryParams = true;
       return this;
     }
 
     Helper addField(String name, String value) {
-      addParam(null, null, name, null, null, value);
+      addParam(null, null, name, null, null, value, null);
       return this;
     }
 
     Helper addPart(String name, Object value) {
-      addParam(null, null, null, name, null, value);
+      addParam(null, null, null, name, null, value, null);
       return this;
     }
 
     Helper setBody(Object value) {
-      addParam(null, null, null, null, null, value);
+      addParam(null, null, null, null, null, value, null);
       bodyIndex = args.size() - 1;
       return this;
     }
 
     Helper addHeaderParam(String name, Object value) {
-      addParam(null, null, null, null, name, value);
+      addParam(null, null, null, null, name, value, null);
       return this;
     }
 
@@ -419,7 +465,7 @@ public class RequestBuilderTest {
       if(args.size() > 0) {
         throw new IllegalStateException("Endpoint must be set before args");
       }
-      addParam(null, null, null, null, null, endpoint);
+      addParam(null, null, null, null, null, endpoint, null);
       return this;
     }
 
@@ -447,6 +493,7 @@ public class RequestBuilderTest {
       methodInfo.requestFormFields = fieldParams.toArray(new String[fieldParams.size()]);
       methodInfo.requestMultipartPart = partParams.toArray(new String[partParams.size()]);
       methodInfo.requestParamHeader = headerParams.toArray(new String[headerParams.size()]);
+      methodInfo.requestSerializers = serializers.toArray(new Serializer[serializers.size()]);
       methodInfo.bodyIndex = bodyIndex;
       methodInfo.loaded = true;
 
