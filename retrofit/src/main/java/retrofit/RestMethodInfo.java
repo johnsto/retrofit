@@ -38,6 +38,8 @@ import retrofit.http.Part;
 import retrofit.http.Path;
 import retrofit.http.Query;
 import retrofit.http.RestMethod;
+import retrofit.serializer.Serialize;
+import retrofit.serializer.Serializer;
 
 /** Request metadata about a service interface declaration. */
 final class RestMethodInfo {
@@ -71,10 +73,12 @@ final class RestMethodInfo {
   String requestQuery;
   boolean expectsEndpoint = false;
   List<retrofit.client.Header> headers;
+  Serializer defaultSerializer = new Serializer();
 
   // Parameter-level details
   String[] requestUrlParam;
   String[] requestQueryName;
+  Serializer[] requestSerializers;
   boolean hasQueryParams = false;
   String[] requestFormFields;
   String[] requestMultipartPart;
@@ -137,6 +141,15 @@ final class RestMethodInfo {
           throw new IllegalStateException("Headers annotation was empty.");
         }
         headers = parseHeaders(headersToParse);
+      } else if (annotationType == Serialize.class) {
+        Class<Serializer> serializerClass = ((Serialize) methodAnnotation).value();
+        try {
+          defaultSerializer = serializerClass.newInstance();
+        } catch (InstantiationException e) {
+          throw new IllegalStateException("Couldn't instantiate serializer.", e);
+        } catch (IllegalAccessException e) {
+          throw new IllegalStateException("Couldn't instantiate serializer.", e);
+        }
       } else if (annotationType == Multipart.class) {
         if (requestType != RequestType.SIMPLE) {
           throw new IllegalStateException(
@@ -304,6 +317,7 @@ final class RestMethodInfo {
 
     String[] urlParam = new String[count];
     String[] queryName = new String[count];
+    Serializer[] serializers = new Serializer[count];
     String[] formValue = new String[count];
     String[] multipartPart = new String[count];
     String[] paramHeader = new String[count];
@@ -344,6 +358,16 @@ final class RestMethodInfo {
             hasQueryParams = true;
             String name = ((Query) parameterAnnotation).value();
             queryName[i] = name;
+          } else if (annotationType == Serialize.class) {
+            hasRetrofitAnnotation = true;
+            Class<Serializer> ser = ((Serialize) parameterAnnotation).value();
+            try {
+              serializers[i] = ser.newInstance();
+            } catch (InstantiationException e) {
+              throw new RuntimeException("Could not instantiate serializer", e);
+            } catch (IllegalAccessException e) {
+              throw new RuntimeException("Could not instantiate serializer", e);
+            }
           } else if (annotationType == Header.class) {
             String name = ((Header) parameterAnnotation).value();
             if (parameterType != String.class) {
@@ -408,6 +432,7 @@ final class RestMethodInfo {
 
     requestUrlParam = urlParam;
     requestQueryName = queryName;
+    requestSerializers = serializers;
     requestFormFields = formValue;
     requestMultipartPart = multipartPart;
     requestParamHeader = paramHeader;
