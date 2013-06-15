@@ -377,6 +377,26 @@ public class RequestBuilderTest {
     assertThat(request.getUrl()).isEqualTo("http://example.com/foo/bar/");
   }
 
+  @Test public void explicitEndpoint() throws Exception {
+    Request request = new Helper() //
+        .setMethod("GET") //
+        .setPath("/foo/bar/") //
+        .setEndpoint("https://example.net/baz/")
+        .addQueryParam("ping", "pong")
+        .build();
+    assertThat(request.getUrl()).isEqualTo("https://example.net/baz/?ping=pong");
+  }
+
+  @Test public void explicitEndpointWithQueryPart() throws Exception {
+    Request request = new Helper() //
+        .setMethod("GET") //
+        .setPath("/foo/bar/") //
+        .setEndpoint("https://example.net/baz/?foo=bar")
+        .addQueryParam("ping", "pong")
+        .build();
+    assertThat(request.getUrl()).isEqualTo("https://example.net/baz/?foo=bar&ping=pong");
+  }
+
   private static void assertTypedBytes(TypedOutput bytes, String expected) throws IOException {
     assertThat(bytes).isNotNull();
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
@@ -391,6 +411,7 @@ public class RequestBuilderTest {
     private String method;
     private boolean hasBody = false;
     private boolean hasQueryParams = false;
+    private boolean hasEndpoint = false;
     private String path;
     private String query;
     private final List<String> pathParams = new ArrayList<String>();
@@ -486,6 +507,15 @@ public class RequestBuilderTest {
       return this;
     }
 
+    Helper setEndpoint(String endpoint) {
+      hasEndpoint = true;
+      if(args.size() > 0) {
+        throw new IllegalStateException("Endpoint must be set before args");
+      }
+      addParam(null, null, null, null, null, endpoint);
+      return this;
+    }
+
     Request build() throws Exception {
       if (method == null) {
         throw new IllegalStateException("Method must be set.");
@@ -499,6 +529,7 @@ public class RequestBuilderTest {
       RestMethodInfo methodInfo = new RestMethodInfo(method);
       methodInfo.requestMethod = this.method;
       methodInfo.requestHasBody = hasBody;
+      methodInfo.expectsEndpoint = hasEndpoint;
       methodInfo.requestType = requestType;
       methodInfo.requestUrl = path;
       methodInfo.requestUrlParamNames = RestMethodInfo.parsePathParameters(path);

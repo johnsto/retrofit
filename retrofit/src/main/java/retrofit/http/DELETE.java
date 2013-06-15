@@ -26,5 +26,5 @@ import static java.lang.annotation.RetentionPolicy.RUNTIME;
 @Retention(RUNTIME)
 @RestMethod("DELETE")
 public @interface DELETE {
-  String value();
+  String value() default "";
 }

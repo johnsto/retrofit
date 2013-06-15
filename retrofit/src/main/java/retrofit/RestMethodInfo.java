@@ -26,16 +26,8 @@ import java.util.List;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import retrofit.http.Body;
-import retrofit.http.Field;
-import retrofit.http.FormUrlEncoded;
-import retrofit.http.Header;
-import retrofit.http.Headers;
-import retrofit.http.Multipart;
-import retrofit.http.Part;
-import retrofit.http.Path;
-import retrofit.http.Query;
-import retrofit.http.RestMethod;
+
+import retrofit.http.*;
 
 /** Request metadata about a service interface declaration. */
 final class RestMethodInfo {
@@ -69,6 +61,7 @@ final class RestMethodInfo {
   Set<String> requestUrlParamNames;
   String requestQuery;
   List<retrofit.client.Header> headers;
+  boolean expectsEndpoint;
 
   // Parameter-level details
   String[] requestUrlParam;
@@ -172,7 +165,14 @@ final class RestMethodInfo {
 
   /** Loads {@link #requestUrl}, {@link #requestUrlParamNames}, and {@link #requestQuery}. */
   private void parsePath(String path) {
-    if (path == null || path.length() == 0 || path.charAt(0) != '/') {
+    // Flag whether we should expect an explicit endpoint as first argument.
+    expectsEndpoint = (path == null || path.length() == 0);
+
+    if(expectsEndpoint) {
+      return;
+    }
+
+    if (path.charAt(0) != '/') {
       throw new IllegalArgumentException("URL path \""
           + path
           + "\" on method "
@@ -312,7 +312,19 @@ final class RestMethodInfo {
         for (Annotation parameterAnnotation : parameterAnnotations) {
           Class<? extends Annotation> annotationType = parameterAnnotation.annotationType();
 
-          if (annotationType == Path.class) {
+          if (annotationType == Endpoint.class) {
+            if(!expectsEndpoint) {
+              throw new IllegalStateException("@Endpoint parameter may not be used with path in " + method);
+            }
+            // By convention, @Endpoint must come first (and just once!)
+            if(i != 0) {
+              throw new IllegalStateException("@Endpoint must be the first parameter in " + method);
+            }
+            if(parameterType != String.class) {
+              throw new IllegalStateException("@Endpoint parameter must be a string in " + method);
+            }
+            hasRetrofitAnnotation = true;
+          } else if (annotationType == Path.class) {
             hasRetrofitAnnotation = true;
             String name = ((Path) parameterAnnotation).value();
 
